@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Grijpmachine</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="machine-page">
+    <main class="machine-layout">
+      <header class="panel">
+        <h1>Kermis Grijpmachine</h1>
+        <p>
+          Open ook
+          <a href="controller.html" target="_blank" rel="noopener"
+            >controller.html</a
+          >
+          om de machine te besturen.
+        </p>
+        <div class="status-row">
+          <span id="connectionStatus" class="pill"
+            >Luistert naar controller...</span
+          >
+          <span id="clawStatus" class="pill">Klauw: open</span>
+          <span id="positionStatus" class="pill">Positie: midden</span>
+          <span id="scoreStatus" class="pill">Prijzen: 0</span>
+        </div>
+      </header>
+
+      <section class="machine-stage panel">
+        <canvas
+          id="machineCanvas"
+          width="920"
+          height="560"
+          aria-label="Grijpmachine"
+        ></canvas>
+      </section>
+    </main>
+
+    <script src="machine.js"></script>
+  </body>
+</html>

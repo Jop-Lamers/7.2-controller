@@ -1,0 +1,285 @@
+:root {
+  --bg-a: #ffe08c;
+  --bg-b: #ffd166;
+  --bg-c: #ff9f1c;
+  --panel: #fff6df;
+  --text: #3f2507;
+  --muted: #714a17;
+  --ink: #2e1a00;
+  --shadow: 0 14px 34px rgba(125, 65, 12, 0.24);
+  --radius: 18px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  font-family: "Trebuchet MS", "Gill Sans", sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 20% 15%, #fff0bd 0, transparent 34%),
+    radial-gradient(circle at 80% 5%, #ffcf7f 0, transparent 36%),
+    repeating-linear-gradient(
+      -18deg,
+      #ffecc1,
+      #ffecc1 26px,
+      #ffd991 26px,
+      #ffd991 52px
+    ),
+    linear-gradient(140deg, var(--bg-a), var(--bg-b), var(--bg-c));
+}
+
+body {
+  padding: 20px;
+}
+
+body.controller-page {
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overscroll-behavior: none;
+}
+
+body.controller-page .panel {
+  width: min(100%, 720px);
+}
+
+.panel {
+  border: 2px solid #ffe4a6;
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  position: relative;
+}
+
+.panel::before {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: -10px;
+  height: 8px;
+  border-radius: 999px;
+  background: repeating-linear-gradient(
+    90deg,
+    #ff2d55 0 12px,
+    #ffd60a 12px 24px,
+    #34c759 24px 36px,
+    #0a84ff 36px 48px
+  );
+  box-shadow: 0 0 8px #ffd60a;
+}
+
+h1 {
+  margin: 0 0 10px;
+  letter-spacing: 1px;
+  font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+  color: #9a1d00;
+  text-transform: uppercase;
+  text-shadow: 1px 1px 0 #ffe9bb;
+}
+
+p {
+  margin: 0;
+  color: var(--muted);
+}
+
+a {
+  color: #c2410c;
+}
+
+.machine-layout {
+  max-width: 980px;
+  margin: 0 auto;
+  display: grid;
+  gap: 16px;
+}
+
+.machine-layout .panel {
+  padding: 14px;
+}
+
+.status-row {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.pill {
+  background: #fff1cc;
+  border: 1px solid #f6bf63;
+  border-radius: 999px;
+  padding: 6px 12px;
+  color: #7a4313;
+  font-size: 0.9rem;
+}
+
+.machine-stage {
+  overflow: hidden;
+}
+
+#machineCanvas {
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  background: linear-gradient(#dbeafe 0 45%, #bfdbfe 45% 100%);
+  display: block;
+  border: 2px solid #f3b34d;
+}
+
+.controller-layout {
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
+  min-height: calc(100svh - 40px);
+  padding: clamp(16px, 4vw, 28px);
+  display: grid;
+  gap: clamp(14px, 3vw, 22px);
+  align-content: space-between;
+}
+
+.joystick {
+  border: 2px solid #f6bf63;
+  border-radius: 14px;
+  padding: clamp(14px, 3vw, 20px);
+  background: repeating-linear-gradient(
+    -28deg,
+    #ffe9bc,
+    #ffe9bc 14px,
+    #ffd58f 14px,
+    #ffd58f 28px
+  );
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.joystick-track {
+  position: relative;
+  height: clamp(74px, 14vw, 104px);
+  border-radius: 999px;
+  border: 2px solid #b45309;
+  background:
+    linear-gradient(90deg, #fff2d1, #ffd991),
+    radial-gradient(circle at center, #ffc867 0, transparent 74%);
+}
+
+.joystick-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: clamp(64px, 12vw, 90px);
+  height: clamp(64px, 12vw, 90px);
+  border-radius: 999px;
+  transform: translate(-50%, -50%) translateX(0);
+  border: 3px solid #fff7e4;
+  background:
+    radial-gradient(circle at 32% 30%, #ff6b6b, #c1121f),
+    linear-gradient(140deg, #ef233c, #9d0208);
+  box-shadow: 0 6px 16px rgba(94, 22, 4, 0.35);
+}
+
+.joystick.is-active .joystick-knob {
+  filter: brightness(1.16);
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.btn {
+  appearance: none;
+  border: 2px solid #fff0cb;
+  border-radius: 12px;
+  min-height: 60px;
+  padding: 16px 18px;
+  cursor: pointer;
+  font-size: 1.08rem;
+  font-weight: 700;
+  color: #f8fafc;
+  background: linear-gradient(135deg, #ff7b00, #e85d04);
+  transition:
+    transform 120ms ease,
+    filter 120ms ease,
+    box-shadow 120ms ease;
+  box-shadow: 0 6px 0 #9a3412;
+}
+
+.btn:hover {
+  filter: brightness(1.12);
+  box-shadow: 0 8px 0 #9a3412;
+  transform: translateY(-2px);
+}
+
+.btn:active,
+.btn.is-pressed {
+  transform: translateY(3px) scale(0.985);
+  filter: brightness(1.2);
+  box-shadow: 0 3px 0 #9a3412;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.action {
+  background: linear-gradient(135deg, #ff7b00, #e85d04);
+}
+
+.grab {
+  background: linear-gradient(135deg, #ff3f34, #c81d25);
+}
+
+.hint {
+  color: #7c4715;
+  font-weight: 700;
+}
+
+@keyframes carnivalGlow {
+  0% {
+    filter: brightness(1);
+  }
+  100% {
+    filter: brightness(1.16);
+  }
+}
+
+.panel::before,
+.btn,
+.joystick-knob {
+  animation: carnivalGlow 1.3s ease-in-out infinite alternate;
+}
+
+@media (max-width: 640px) {
+  body {
+    padding: 10px;
+  }
+
+  body.controller-page {
+    align-items: stretch;
+  }
+
+  .controller-layout {
+    min-height: calc(100svh - 20px);
+    padding: 14px;
+  }
+
+  .joystick-track {
+    height: 88px;
+  }
+
+  .btn {
+    min-height: 68px;
+    font-size: 1.15rem;
+  }
+}
