@@ -12,9 +12,35 @@ const controllerId = (() => {
   return existing;
 })();
 
+const seqStateKey = `grijpmachine-seq-${controllerId}`;
+function loadSeqState() {
+  try {
+    const raw = localStorage.getItem(seqStateKey);
+    if (!raw) return { grabSeq: 0, releaseSeq: 0 };
+    const parsed = JSON.parse(raw);
+    return {
+      grabSeq: Math.max(0, Number(parsed.grabSeq) || 0),
+      releaseSeq: Math.max(0, Number(parsed.releaseSeq) || 0),
+    };
+  } catch {
+    return { grabSeq: 0, releaseSeq: 0 };
+  }
+}
+
+function saveSeqState() {
+  const snapshot = {
+    grabSeq: netState.grabSeq,
+    releaseSeq: netState.releaseSeq,
+  };
+  localStorage.setItem(seqStateKey, JSON.stringify(snapshot));
+}
+
+const storedSeqState = loadSeqState();
+
 const netState = {
   axis: 0,
-  grabSeq: 0,
+  grabSeq: storedSeqState.grabSeq,
+  releaseSeq: storedSeqState.releaseSeq,
 };
 const API_UPDATE_URL = new URL(
   "api/update-state.php",
@@ -42,9 +68,13 @@ function syncNetworkState(action, pressed) {
     netState.axis = Math.max(-1, Math.min(1, Number(pressed) || 0));
   } else if (action === "grab" && pressed) {
     netState.grabSeq += 1;
+    saveSeqState();
+  } else if (action === "release" && pressed) {
+    netState.releaseSeq += 1;
+    saveSeqState();
   }
 
-  postNetworkState();
+  queueNetworkPost();
 }
 
 async function postNetworkState() {
@@ -53,6 +83,7 @@ async function postNetworkState() {
       controllerId,
       axis: netState.axis,
       grabSeq: netState.grabSeq,
+      releaseSeq: netState.releaseSeq,
       clientTime: Date.now(),
     };
 
@@ -80,6 +111,11 @@ async function postNetworkState() {
   } catch (err) {
     console.warn("[Controller] Network error:", err.message);
   }
+}
+
+function queueNetworkPost() {
+  if (document.hidden) return;
+  postNetworkState();
 }
 
 const joystick = document.getElementById("joystick");
@@ -147,15 +183,51 @@ joystick.addEventListener("pointerup", releaseJoystick);
 joystick.addEventListener("pointercancel", releaseJoystick);
 joystick.addEventListener("lostpointercapture", releaseJoystick);
 
+function triggerActionButton(button, action) {
+  if (!button) return;
+  button.classList.add("is-pressed");
+  send(action, true);
+  setTimeout(() => button.classList.remove("is-pressed"), 150);
+}
+
+function bindActionButton(button, action) {
+  if (!button) return;
+  let lastTriggerAt = 0;
+  const triggerOnce = (event) => {
+    if (event) event.preventDefault();
+    const now = Date.now();
+    if (now - lastTriggerAt < 250) return;
+    lastTriggerAt = now;
+    triggerActionButton(button, action);
+  };
+
+  button.addEventListener("pointerdown", triggerOnce);
+  button.addEventListener(
+    "touchstart",
+    (event) => {
+      triggerOnce(event);
+    },
+    { passive: false },
+  );
+  button.addEventListener("click", triggerOnce);
+}
+
 const grabButton = document.querySelector("[data-action='grab']");
-grabButton.addEventListener("click", () => {
-  grabButton.classList.add("is-pressed");
-  send("grab", true);
-  setTimeout(() => grabButton.classList.remove("is-pressed"), 150);
-});
+bindActionButton(grabButton, "grab");
+
+const releaseButton = document.querySelector("[data-action='release']");
+bindActionButton(releaseButton, "release");
 
 window.addEventListener("resize", updateKnobPosition);
 centerJoystick();
 console.log("[Controller] Initialized, controllerId:", controllerId);
-postNetworkState();
-setInterval(postNetworkState, 120);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    queueNetworkPost();
+  }
+});
+queueNetworkPost();
+setInterval(() => {
+  if (document.hidden) return;
+  queueNetworkPost();
+}, 350);

@@ -2,24 +2,24 @@
 
 ## Grijpmachine + Controller
 
-Dit project bevat twee pagina's:
+Dit project gebruikt alleen de PHP-pagina's:
 
-- `machine.html`: de grijpmachine met zwaartekracht-simulatie.
-- `controller.html`: de bediening om de grijpmachine live te besturen.
+- `machine.php`: de grijpmachine met zwaartekracht-simulatie.
+- `controller.php`: de bediening om de grijpmachine live te besturen.
 
 ## Starten
 
 1. Start Apache via XAMPP.
-2. Open `http://localhost/7.2-controller/machine.html`.
-3. Open daarna `http://localhost/7.2-controller/controller.html` in een tweede tab of venster.
+2. Open `http://localhost/7.2-controller/machine.php`.
+3. Open daarna `http://localhost/7.2-controller/controller.php` in een tweede tab of venster.
 4. Gebruik de joystick en knop op de controller om de klauw te bedienen.
 
 ## Telefoon + laptop verbinden
 
 1. Zorg dat telefoon en laptop op hetzelfde wifi-netwerk zitten.
 2. Zoek het IP-adres van je laptop (bijvoorbeeld `192.168.1.120`).
-3. Open op de laptop: `http://192.168.1.120/7.2-controller/machine.html`.
-4. Open op de telefoon: `http://192.168.1.120/7.2-controller/controller.html`.
+3. Open op de laptop: `http://192.168.1.120/7.2-controller/machine.php`.
+4. Open op de telefoon: `http://192.168.1.120/7.2-controller/controller.php`.
 
 De controller en machine praten nu via de XAMPP-server (`api/state.php` en `api/update-state.php`) in plaats van alleen via browser-tab communicatie.
 
@@ -33,15 +33,7 @@ De controller en machine praten nu via de XAMPP-server (`api/state.php` en `api/
 
 - Joystick links-rechts: beweegt de klauw horizontaal.
 - Grijp-knop: de klauw gaat automatisch omlaag, sluit, en gaat weer omhoog zoals op de kermis.
-
-## Wijzigingen
-
-### Versie 2 (fixes)
-
-- **Grijper vergroot**: 2x groter, betere reach, gemakkelijker balletjes pakken.
-- **Network debugging**: Console output zodat je ziet wat er gebeurt tussen telefoon en laptop.
-- **Smoother axis**: Animatie op joystick-beweging naar machine.
-- **Betere error handling**: PHP sessions i.p.v. filesysteem (betrouwbaarder).
+- Laat vallen-knop: opent de klauw direct zodat je de munt/bal kunt droppen.
 
 ## Troubleshooting
 
@@ -53,7 +45,7 @@ De controller en machine praten nu via de XAMPP-server (`api/state.php` en `api/
 
 **Telefoon + laptop niet verbonden?**
 
-1. **Test eerst lokaal** - open machine.html en controller.html in twee tabs op hetzelfde apparaat. Dit werkt altijd.
+1. **Test eerst lokaal** - open machine.php en controller.php in twee tabs op hetzelfde apparaat. Dit werkt altijd.
 2. **Check IP-adres** - op laptop: open `ipconfig` (Windows) of `ifconfig` (Mac/Linux) en zoek het `192.168.x.x` adres.
 3. **Zelfde host op beide apparaten** - gebruik niet `localhost` op laptop én `192.168.x.x` op telefoon. Doe beide met dezelfde IP.
 4. **Browser-console checken** - druk F12, ga naar "Console" tab:
@@ -61,7 +53,7 @@ De controller en machine praten nu via de XAMPP-server (`api/state.php` en `api/
    - **Machine**: Zoek naar "[Machine]" berichten, zie je "Controller verbonden (netwerk)"?
    - Errors verschijnen rood.
 5. **Firewall** - check of je router/firewall de communicatie niet blokkeert. XAMPP moet inbound-traffic toestaan.
-6. **PHP sessions** - zorg dat PHP sessions beschrijfbaar zijn (meestal automatisch).
+6. **Statebestand** - controleer dat `data/state.json` schrijfbaar is voor PHP.
 7. **Refresh** - refresh beide pagina's na het wijzigen van IP.
 
 Het werkt altijd lokaal (twee tabs). Cross-device werkt als beide apparaten dezelfde XAMPP-server kunnen bereiken.

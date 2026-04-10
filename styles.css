@@ -43,6 +43,18 @@ body.controller-page {
   align-items: center;
   justify-content: center;
   overscroll-behavior: none;
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(255, 245, 191, 0.8),
+      transparent 36%
+    ),
+    repeating-conic-gradient(
+      from 0deg at 50% 50%,
+      rgba(255, 212, 138, 0.22) 0deg 14deg,
+      rgba(255, 170, 60, 0.22) 14deg 28deg
+    ),
+    linear-gradient(145deg, #ffd86f, #ffbc4d, #ff9f1c);
 }
 
 body.controller-page .panel {
@@ -94,30 +106,166 @@ a {
 }
 
 .machine-layout {
-  max-width: 980px;
+  max-width: 1220px;
   margin: 0 auto;
   display: grid;
-  gap: 16px;
+  gap: 20px;
 }
 
 .machine-layout .panel {
-  padding: 14px;
+  padding: 18px;
 }
 
 .status-row {
   margin-top: 12px;
   display: flex;
-  gap: 10px;
+  gap: 12px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .pill {
   background: #fff1cc;
   border: 1px solid #f6bf63;
   border-radius: 999px;
-  padding: 6px 12px;
+  padding: 8px 14px;
   color: #7a4313;
-  font-size: 0.9rem;
+  font-size: 1rem;
+}
+
+.round-buy-btn {
+  border: 2px solid #f59e0b;
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #facc15, #f59e0b);
+  color: #7c2d12;
+  font-weight: 900;
+  font-size: 0.98rem;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+  cursor: pointer;
+  transition:
+    transform 120ms ease,
+    filter 120ms ease,
+    opacity 120ms ease;
+}
+
+.round-buy-btn:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.round-buy-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  filter: grayscale(0.2);
+  transform: none;
+}
+
+.round-modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(39, 20, 1, 0.58);
+  backdrop-filter: blur(3px);
+  z-index: 50;
+}
+
+.round-modal[hidden] {
+  display: none;
+}
+
+.round-modal__card {
+  width: min(96vw, 560px);
+  padding: 26px;
+  display: grid;
+  gap: 14px;
+  text-align: center;
+  border: 3px solid #f59e0b;
+  box-shadow:
+    0 20px 44px rgba(124, 45, 18, 0.34),
+    inset 0 0 0 2px #fff0ca;
+}
+
+.round-modal__card h2 {
+  margin: 0;
+  font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+  text-transform: uppercase;
+  color: #9a1d00;
+  letter-spacing: 1px;
+}
+
+.round-modal__card p {
+  margin: 0;
+  color: #7a4313;
+  font-size: 1.08rem;
+}
+
+body.is-round-modal-open {
+  overflow: hidden;
+}
+
+#turnsStatus {
+  font-weight: 800;
+  border-width: 2px;
+}
+
+#turnsStatus.is-empty {
+  color: #991b1b;
+  border-color: #ef4444;
+  background: #fee2e2;
+}
+
+#scoreStatus {
+  font-size: 1.45rem;
+  font-weight: 900;
+  letter-spacing: 0.4px;
+  border: 3px solid #f59e0b;
+  color: #7c2d12;
+  padding: 10px 18px;
+  background: radial-gradient(
+    circle at 30% 25%,
+    #fff7c2,
+    #ffd24d 65%,
+    #f59e0b 100%
+  );
+  box-shadow:
+    0 0 0 2px #fff4d6,
+    0 0 14px rgba(245, 158, 11, 0.65),
+    inset 0 -3px 0 rgba(146, 64, 14, 0.3);
+  text-transform: uppercase;
+}
+
+#scoreStatus::before {
+  content: "WIN ";
+  color: #9a3412;
+  margin-right: 4px;
+}
+
+#scoreStatus.is-jackpot {
+  animation: jackpotPop 520ms cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+
+@keyframes jackpotPop {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  35% {
+    transform: scale(1.16) rotate(-1deg);
+    filter: brightness(1.3);
+  }
+  65% {
+    transform: scale(1.08) rotate(1deg);
+    filter: brightness(1.15);
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
 }
 
 .machine-stage {
@@ -127,21 +275,39 @@ a {
 #machineCanvas {
   width: 100%;
   height: auto;
-  border-radius: 10px;
+  border-radius: 14px;
   background: linear-gradient(#dbeafe 0 45%, #bfdbfe 45% 100%);
   display: block;
-  border: 2px solid #f3b34d;
+  border: 3px solid #f3b34d;
 }
 
 .controller-layout {
-  max-width: 720px;
+  max-width: 860px;
   margin: 0 auto;
   width: 100%;
   min-height: calc(100svh - 40px);
-  padding: clamp(16px, 4vw, 28px);
+  padding: clamp(18px, 4vw, 34px);
   display: grid;
-  gap: clamp(14px, 3vw, 22px);
+  gap: clamp(16px, 3vw, 26px);
   align-content: space-between;
+  border: 3px solid #f59e0b;
+  box-shadow:
+    0 16px 34px rgba(124, 45, 18, 0.28),
+    inset 0 0 0 2px #ffedc2;
+}
+
+.controller-layout h1 {
+  font-size: clamp(2rem, 5vw, 3rem);
+  letter-spacing: 1.5px;
+  text-align: center;
+}
+
+.controller-layout h1::before,
+.controller-layout h1::after {
+  content: "*";
+  color: #f59e0b;
+  margin: 0 10px;
+  text-shadow: 0 0 8px rgba(245, 158, 11, 0.9);
 }
 
 .joystick {
@@ -163,7 +329,7 @@ a {
 
 .joystick-track {
   position: relative;
-  height: clamp(74px, 14vw, 104px);
+  height: clamp(92px, 16vw, 132px);
   border-radius: 999px;
   border: 2px solid #b45309;
   background:
@@ -175,8 +341,8 @@ a {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: clamp(64px, 12vw, 90px);
-  height: clamp(64px, 12vw, 90px);
+  width: clamp(78px, 13vw, 112px);
+  height: clamp(78px, 13vw, 112px);
   border-radius: 999px;
   transform: translate(-50%, -50%) translateX(0);
   border: 3px solid #fff7e4;
@@ -193,18 +359,20 @@ a {
 .actions {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 10px;
+  gap: 14px;
 }
 
 .btn {
   appearance: none;
   border: 2px solid #fff0cb;
-  border-radius: 12px;
-  min-height: 60px;
-  padding: 16px 18px;
+  border-radius: 14px;
+  min-height: 78px;
+  padding: 18px 20px;
   cursor: pointer;
-  font-size: 1.08rem;
-  font-weight: 700;
+  font-size: clamp(1.2rem, 2.8vw, 1.5rem);
+  font-weight: 900;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
   color: #f8fafc;
   background: linear-gradient(135deg, #ff7b00, #e85d04);
   transition:
@@ -237,7 +405,11 @@ a {
 }
 
 .grab {
-  background: linear-gradient(135deg, #ff3f34, #c81d25);
+  background: linear-gradient(135deg, #ff5a3d, #c81d25);
+}
+
+.release {
+  background: linear-gradient(135deg, #22b8ff, #0369a1);
 }
 
 .hint {
@@ -275,11 +447,11 @@ a {
   }
 
   .joystick-track {
-    height: 88px;
+    height: 100px;
   }
 
   .btn {
-    min-height: 68px;
-    font-size: 1.15rem;
+    min-height: 82px;
+    font-size: 1.25rem;
   }
 }

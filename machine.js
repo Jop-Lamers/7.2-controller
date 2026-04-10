@@ -2,6 +2,10 @@ const canvas = document.getElementById("machineCanvas");
 const ctx = canvas.getContext("2d");
 
 const connectionStatus = document.getElementById("connectionStatus");
+const turnsStatus = document.getElementById("turnsStatus");
+const newRoundButton = document.getElementById("newRoundButton");
+const roundModal = document.getElementById("roundModal");
+const roundModalMessage = document.getElementById("roundModalMessage");
 const clawStatus = document.getElementById("clawStatus");
 const positionStatus = document.getElementById("positionStatus");
 const scoreStatus = document.getElementById("scoreStatus");
@@ -12,10 +16,10 @@ const FLOOR_Y = HEIGHT - 24;
 const WALL_LEFT = 24;
 const WALL_RIGHT = WIDTH - 24;
 const PRIZE_BIN = {
-  x: WALL_RIGHT - 160,
-  y: FLOOR_Y - 96,
-  width: 130,
-  height: 72,
+  x: WALL_RIGHT - 200,
+  y: FLOOR_Y - 150,
+  width: 180,
+  height: 130,
 };
 
 const controls = {
@@ -28,19 +32,21 @@ const controls = {
 };
 
 let lastNetworkSeenAt = 0;
-let lastGrabSeq = 0;
 let lastControllerId = "";
+let networkStateInitialized = false;
+const lastGrabSeqByController = Object.create(null);
+const lastReleaseSeqByController = Object.create(null);
 const API_STATE_URL = new URL("api/state.php", window.location.href).toString();
 
 const claw = {
   x: WIDTH / 2,
   y: 78,
-  speed: 720,
+  speed: 820,
   minY: 70,
-  maxY: HEIGHT - 120,
+  maxY: HEIGHT - 150,
   open: true,
-  fingerGap: 120,
-  targetGap: 120,
+  fingerGap: 155,
+  targetGap: 155,
   grabbedId: null,
   auto: null,
 };
@@ -48,17 +54,123 @@ const claw = {
 const gravity = 820;
 const balls = [];
 let score = 0;
+let totalWonValue = 0;
+const MAX_TURNS = 3;
+const ROUND_COST = 30;
+let turnsUsed = 0;
+const INITIAL_BALL_COUNT = 30;
 
-for (let i = 0; i < 15; i += 1) {
-  const radius = 14 + Math.random() * 8;
+function updateTurnsStatus() {
+  if (!turnsStatus) return;
+  const turnsLeft = Math.max(0, MAX_TURNS - turnsUsed);
+  turnsStatus.textContent = `Beurten over: ${turnsLeft}/${MAX_TURNS}`;
+  turnsStatus.classList.toggle("is-empty", turnsLeft === 0);
+  updateNewRoundButton();
+}
+
+function isRoundFinished() {
+  // End the round only after the last turn is fully resolved:
+  // no auto cycle running and no ball still hanging in the claw.
+  return turnsUsed >= MAX_TURNS && !claw.auto && claw.grabbedId === null;
+}
+
+function canStartGrabTurn() {
+  return turnsUsed < MAX_TURNS;
+}
+
+function consumeGrabTurn() {
+  if (!canStartGrabTurn()) return false;
+  turnsUsed += 1;
+  updateTurnsStatus();
+  return true;
+}
+
+function updateNewRoundButton() {
+  if (!newRoundButton || !roundModal) return;
+
+  const roundFinished = isRoundFinished();
+  const canAfford = totalWonValue >= ROUND_COST;
+  roundModal.hidden = !roundFinished;
+  newRoundButton.disabled = !canAfford;
+
+  if (document.body) {
+    document.body.classList.toggle("is-round-modal-open", roundFinished);
+  }
+
+  if (!roundFinished) {
+    newRoundButton.textContent = `Nieuwe ronde starten voor €${ROUND_COST}`;
+    if (roundModalMessage) {
+      roundModalMessage.textContent = "Je hebt 3 beurten gebruikt.";
+    }
+    return;
+  }
+
+  if (!canAfford) {
+    newRoundButton.textContent = `Te weinig saldo voor €${ROUND_COST}`;
+    if (roundModalMessage) {
+      roundModalMessage.textContent = `Je saldo is €${totalWonValue}. Je hebt €${ROUND_COST} nodig voor een nieuwe ronde.`;
+    }
+    return;
+  }
+
+  if (roundModalMessage) {
+    roundModalMessage.textContent = `Je saldo is €${totalWonValue}. Start direct een nieuwe ronde voor €${ROUND_COST}.`;
+  }
+  newRoundButton.textContent = `Nieuwe ronde starten voor €${ROUND_COST}`;
+}
+
+function buyNewRound() {
+  if (claw.auto || !isRoundFinished()) return;
+
+  if (totalWonValue < ROUND_COST) {
+    connectionStatus.textContent = `Te weinig saldo voor nieuwe ronde (€${ROUND_COST})`;
+    updateNewRoundButton();
+    return;
+  }
+
+  totalWonValue -= ROUND_COST;
+  turnsUsed = 0;
+  updateScoreStatus();
+  updateTurnsStatus();
+  connectionStatus.textContent = "Nieuwe ronde gestart";
+}
+
+function spawnBallPosition(radius) {
+  let x = 0;
+  let y = 0;
+  let safe = false;
+
+  while (!safe) {
+    // Keep all initial spawns on the left/top side of the machine.
+    x = WALL_LEFT + 60 + Math.random() * (WIDTH * 0.58 - WALL_LEFT - 60);
+    y = 120 + Math.random() * 150;
+
+    const withinPrizeX =
+      x + radius >= PRIZE_BIN.x - 20 &&
+      x - radius <= PRIZE_BIN.x + PRIZE_BIN.width + 20;
+    const withinPrizeY = y + radius >= PRIZE_BIN.y - 120;
+
+    // Keep initial balls away from the money bin so they do not score automatically at start.
+    safe = !(withinPrizeX && withinPrizeY);
+  }
+
+  return { x, y };
+}
+
+for (let i = 0; i < INITIAL_BALL_COUNT; i += 1) {
+  const radius = 16 + Math.random() * 10;
+  const value = [5, 10, 20, 50][Math.floor(Math.random() * 4)];
+  const spawn = spawnBallPosition(radius);
   balls.push({
     id: i,
-    x: WALL_LEFT + 45 + Math.random() * (WALL_RIGHT - WALL_LEFT - 90),
-    y: 130 + Math.random() * 160,
-    vx: (Math.random() - 0.5) * 55,
+    x: spawn.x,
+    y: spawn.y,
+    vx: (Math.random() - 0.5) * 24,
     vy: 0,
     radius,
-    color: `hsl(${Math.floor(Math.random() * 360)}, 70%, 56%)`,
+    value,
+    carried: false,
+    color: value >= 50 ? "#f59e0b" : value >= 20 ? "#fbbf24" : "#fde68a",
   });
 }
 
@@ -68,25 +180,41 @@ function getBallById(id) {
 
 function updateScoreStatus() {
   if (scoreStatus) {
-    scoreStatus.textContent = `Prijzen: ${score}`;
+    scoreStatus.textContent = `Gewonnen: €${totalWonValue} (${score})`;
   }
+  updateNewRoundButton();
 }
 
 function isInsidePrizeBin(ball) {
+  const r = ball.radius;
+
+  // Use overlap checks so fast-falling balls and edge drops still count.
   return (
-    ball.x >= PRIZE_BIN.x + 10 &&
-    ball.x <= PRIZE_BIN.x + PRIZE_BIN.width - 10 &&
-    ball.y >= PRIZE_BIN.y + 6 &&
-    ball.y <= PRIZE_BIN.y + PRIZE_BIN.height - 6
+    ball.x + r >= PRIZE_BIN.x &&
+    ball.x - r <= PRIZE_BIN.x + PRIZE_BIN.width &&
+    ball.y + r >= PRIZE_BIN.y &&
+    ball.y - r <= PRIZE_BIN.y + PRIZE_BIN.height
   );
+}
+
+function isEligibleForPrize(ball) {
+  return ball.carried && isInsidePrizeBin(ball);
 }
 
 function collectPrize(ballId) {
   const index = balls.findIndex((item) => item.id === ballId);
   if (index === -1) return;
+  totalWonValue += balls[index].value;
   balls.splice(index, 1);
   score += 1;
   updateScoreStatus();
+
+  if (scoreStatus) {
+    scoreStatus.classList.remove("is-jackpot");
+    // Force reflow so animation can retrigger on consecutive wins.
+    void scoreStatus.offsetWidth;
+    scoreStatus.classList.add("is-jackpot");
+  }
 }
 
 function releaseGrab() {
@@ -96,8 +224,8 @@ function releaseGrab() {
     grabbed.vx = 0;
     grabbed.vy = 0;
 
-    // If released above the prize bin, count as won immediately.
-    if (isInsidePrizeBin(grabbed)) {
+    // Only count if the ball was actually carried by the claw.
+    if (isEligibleForPrize(grabbed)) {
       const wonId = grabbed.id;
       claw.grabbedId = null;
       collectPrize(wonId);
@@ -128,6 +256,7 @@ function tryGrab() {
 
   if (best) {
     claw.grabbedId = best.id;
+    best.carried = true;
     best.vx = 0;
     best.vy = 0;
   }
@@ -135,7 +264,7 @@ function tryGrab() {
 
 function setOpenState(open) {
   claw.open = open;
-  claw.targetGap = open ? 120 : 42;
+  claw.targetGap = open ? 155 : 52;
   if (open) {
     releaseGrab();
   } else {
@@ -144,11 +273,16 @@ function setOpenState(open) {
 }
 
 function startDropAutomation() {
-  if (claw.auto) return;
+  if (claw.auto) return false;
+  if (!consumeGrabTurn()) {
+    connectionStatus.textContent = "Geen beurten meer";
+    return false;
+  }
   claw.auto = {
     phase: "down",
     closeTimer: 0,
   };
+  return true;
 }
 
 function handleControlMessage(msg) {
@@ -164,6 +298,11 @@ function handleControlMessage(msg) {
 
   if (msg.action === "close" && msg.pressed) {
     setOpenState(false);
+    return;
+  }
+
+  if (msg.action === "release" && msg.pressed) {
+    setOpenState(true);
     return;
   }
 
@@ -240,16 +379,57 @@ async function pollNetworkState() {
 
     const axis = Math.max(-1, Math.min(1, Number(data.axis) || 0));
     const grabSeq = Number(data.grabSeq) || 0;
+    const releaseSeq = Number(data.releaseSeq) || 0;
+    const controllerId = String(data.controllerId || "");
 
     controls.axisTarget = axis;
 
-    if (grabSeq > lastGrabSeq) {
-      lastGrabSeq = grabSeq;
-      console.log("[Machine] Grab triggered via network, seq=", grabSeq);
-      startDropAutomation();
+    if (!networkStateInitialized) {
+      lastGrabSeqByController[controllerId] = grabSeq;
+      lastReleaseSeqByController[controllerId] = releaseSeq;
+      lastControllerId = controllerId;
+      lastNetworkSeenAt = performance.now();
+      networkStateInitialized = true;
+      return;
     }
 
-    lastControllerId = String(data.controllerId || "");
+    if (!(controllerId in lastGrabSeqByController)) {
+      lastGrabSeqByController[controllerId] = grabSeq;
+    }
+    if (!(controllerId in lastReleaseSeqByController)) {
+      lastReleaseSeqByController[controllerId] = releaseSeq;
+    }
+
+    let prevGrabSeq = lastGrabSeqByController[controllerId];
+    let prevReleaseSeq = lastReleaseSeqByController[controllerId];
+
+    // Controller counters can reset after refresh. Re-baseline per controller.
+    if (grabSeq < prevGrabSeq) {
+      prevGrabSeq = grabSeq;
+      lastGrabSeqByController[controllerId] = grabSeq;
+    }
+    if (releaseSeq < prevReleaseSeq) {
+      prevReleaseSeq = releaseSeq;
+      lastReleaseSeqByController[controllerId] = releaseSeq;
+    }
+
+    if (grabSeq > prevGrabSeq) {
+      lastGrabSeqByController[controllerId] = grabSeq;
+      console.log("[Machine] Grab triggered via network, seq=", grabSeq);
+      // If a ball is already held, this click is the user's release action.
+      // Do not restart the auto cycle, otherwise the claw immediately grabs again.
+      if (claw.grabbedId === null && claw.open) {
+        startDropAutomation();
+      }
+    }
+
+    if (releaseSeq > prevReleaseSeq) {
+      lastReleaseSeqByController[controllerId] = releaseSeq;
+      console.log("[Machine] Release triggered via network, seq=", releaseSeq);
+      setOpenState(true);
+    }
+
+    lastControllerId = controllerId;
     lastNetworkSeenAt = performance.now();
   } catch (err) {
     console.warn("[Machine] Network poll failed:", err.message);
@@ -258,6 +438,10 @@ async function pollNetworkState() {
 
 setInterval(pollNetworkState, 30);
 pollNetworkState();
+updateTurnsStatus();
+if (newRoundButton) {
+  newRoundButton.addEventListener("click", buyNewRound);
+}
 
 function updateClaw(dt) {
   const fallbackHorizontal = (controls.right ? 1 : 0) - (controls.left ? 1 : 0);
@@ -348,10 +532,12 @@ function updateClaw(dt) {
     grabbed.vy = 0;
   }
 
-  if (claw.grabbedId !== null) {
-    clawStatus.textContent = "Klauw: dicht (prijs vast)";
-  } else {
-    clawStatus.textContent = claw.open ? "Klauw: open" : "Klauw: dicht";
+  if (clawStatus) {
+    if (claw.grabbedId !== null) {
+      clawStatus.textContent = "Klauw: dicht (prijs vast)";
+    } else {
+      clawStatus.textContent = claw.open ? "Klauw: open" : "Klauw: dicht";
+    }
   }
 
   const networkAge = performance.now() - lastNetworkSeenAt;
@@ -366,15 +552,28 @@ function updateClaw(dt) {
   if (positionStatus) {
     positionStatus.textContent = `Positie: ${claw.x < WIDTH * 0.33 ? "links" : claw.x > WIDTH * 0.66 ? "rechts" : "midden"} | axis: ${controls.axisTarget.toFixed(2)}`;
   }
+
+  updateNewRoundButton();
 }
 
 function updateBalls(dt) {
+  const binTop = PRIZE_BIN.y + 16;
+  const binLeft = PRIZE_BIN.x;
+  const binRight = PRIZE_BIN.x + PRIZE_BIN.width;
+  const rightBlockTop = PRIZE_BIN.y - 120;
+
   for (const ball of balls) {
     if (ball.id === claw.grabbedId) continue;
 
     ball.vy += gravity * dt;
     ball.x += ball.vx * dt;
     ball.y += ball.vy * dt;
+
+    // Score only if the ball was carried by the claw before entering the bin.
+    if (isEligibleForPrize(ball)) {
+      collectPrize(ball.id);
+      continue;
+    }
 
     if (ball.x - ball.radius < WALL_LEFT) {
       ball.x = WALL_LEFT + ball.radius;
@@ -393,10 +592,23 @@ function updateBalls(dt) {
       if (Math.abs(ball.vy) < 6) ball.vy = 0;
     }
 
-    // Prize detection: ball must actually be dropped into the bin area.
-    if (isInsidePrizeBin(ball)) {
-      collectPrize(ball.id);
-      continue;
+    // Hard no-pass wall: balls cannot move to the right of the money bin region.
+    if (
+      ball.y + ball.radius >= rightBlockTop &&
+      ball.x + ball.radius > binRight
+    ) {
+      ball.x = binRight - ball.radius;
+      ball.vx = Math.min(0, ball.vx) * -0.45;
+    }
+
+    // Left barrier of the money bin: balls should not slide past this side.
+    if (
+      ball.y + ball.radius >= binTop &&
+      ball.x - ball.radius < binLeft &&
+      ball.x + ball.radius > binLeft
+    ) {
+      ball.x = binLeft - ball.radius;
+      ball.vx = -Math.abs(ball.vx) * 0.45;
     }
   }
 
@@ -443,55 +655,78 @@ function drawMachine() {
   ctx.fillStyle = "#475569";
   ctx.fillRect(WALL_LEFT, 20, WALL_RIGHT - WALL_LEFT, 18);
 
-  // Prize bin (target to drop captured balls into).
+  // Open-top money basket at bottom-right.
   ctx.fillStyle = "#fef3c7";
-  ctx.fillRect(PRIZE_BIN.x, PRIZE_BIN.y, PRIZE_BIN.width, PRIZE_BIN.height);
-  ctx.strokeStyle = "#d97706";
-  ctx.lineWidth = 4;
-  ctx.strokeRect(PRIZE_BIN.x, PRIZE_BIN.y, PRIZE_BIN.width, PRIZE_BIN.height);
+  ctx.fillRect(
+    PRIZE_BIN.x,
+    PRIZE_BIN.y + 16,
+    PRIZE_BIN.width,
+    PRIZE_BIN.height - 16,
+  );
+  ctx.fillStyle = "#92400e";
+  ctx.fillRect(PRIZE_BIN.x - 8, PRIZE_BIN.y + 16, 8, PRIZE_BIN.height - 16);
+  ctx.fillStyle = "#f59e0b";
+  ctx.fillRect(PRIZE_BIN.x - 10, PRIZE_BIN.y + 10, PRIZE_BIN.width + 20, 8);
+  ctx.strokeStyle = "#92400e";
+  ctx.lineWidth = 7;
+  ctx.strokeRect(
+    PRIZE_BIN.x,
+    PRIZE_BIN.y + 16,
+    PRIZE_BIN.width,
+    PRIZE_BIN.height - 16,
+  );
   ctx.fillStyle = "#7c2d12";
-  ctx.font = "bold 14px Trebuchet MS";
-  ctx.fillText("PRIJS BAK", PRIZE_BIN.x + 16, PRIZE_BIN.y + 24);
+  ctx.font = "bold 16px Trebuchet MS";
+  ctx.fillText("GELDBAK", PRIZE_BIN.x + 42, PRIZE_BIN.y + 36);
 
   for (const ball of balls) {
     ctx.beginPath();
     ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
     ctx.fillStyle = ball.color;
     ctx.fill();
-    ctx.strokeStyle = "rgba(15, 23, 42, 0.35)";
+    ctx.strokeStyle = "rgba(120, 53, 15, 0.4)";
     ctx.lineWidth = 2;
     ctx.stroke();
+
+    ctx.fillStyle = "#7c2d12";
+    ctx.font = `bold ${Math.max(12, ball.radius * 0.9)}px Trebuchet MS`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(`€${ball.value}`, ball.x, ball.y + 0.5);
   }
 
+  ctx.textAlign = "start";
+  ctx.textBaseline = "alphabetic";
+
   const railY = 38;
-  const bodyY = claw.y - 16;
+  const bodyY = claw.y - 20;
 
   ctx.strokeStyle = "#0f172a";
-  ctx.lineWidth = 3;
+  ctx.lineWidth = 4;
   ctx.beginPath();
   ctx.moveTo(claw.x, railY);
   ctx.lineTo(claw.x, bodyY);
   ctx.stroke();
 
   ctx.fillStyle = "#334155";
-  ctx.fillRect(claw.x - 24, bodyY - 12, 48, 24);
+  ctx.fillRect(claw.x - 30, bodyY - 14, 60, 28);
 
   const leftFingerX = claw.x - claw.fingerGap / 2;
   const rightFingerX = claw.x + claw.fingerGap / 2;
-  const fingerTop = bodyY + 12;
-  const fingerBottom = claw.y + 60;
+  const fingerTop = bodyY + 14;
+  const fingerBottom = claw.y + 76;
 
   ctx.strokeStyle = "#111827";
-  ctx.lineWidth = 7;
+  ctx.lineWidth = 9;
 
   ctx.beginPath();
   ctx.moveTo(leftFingerX, fingerTop);
-  ctx.lineTo(leftFingerX - 16, fingerBottom);
+  ctx.lineTo(leftFingerX - 18, fingerBottom);
   ctx.stroke();
 
   ctx.beginPath();
   ctx.moveTo(rightFingerX, fingerTop);
-  ctx.lineTo(rightFingerX + 16, fingerBottom);
+  ctx.lineTo(rightFingerX + 18, fingerBottom);
   ctx.stroke();
 }
 

@@ -8,6 +8,7 @@ header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 $default = [
     'axis' => 0,
     'grabSeq' => 0,
+    'releaseSeq' => 0,
     'controllerId' => '',
     'updatedAt' => 0,
 ];

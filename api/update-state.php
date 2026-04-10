@@ -26,6 +26,7 @@ $stateFile = $dataDir . DIRECTORY_SEPARATOR . 'state.json';
 $state = [
     'axis' => max(-1, min(1, (float)($payload['axis'] ?? 0))),
     'grabSeq' => max(0, (int)($payload['grabSeq'] ?? 0)),
+    'releaseSeq' => max(0, (int)($payload['releaseSeq'] ?? 0)),
     'controllerId' => (string)($payload['controllerId'] ?? ''),
     'updatedAt' => (int) round(microtime(true) * 1000),
 ];
